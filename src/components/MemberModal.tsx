@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, UserCheck, AlertCircle } from 'lucide-react';
 
+import { createMemberAction, updateMemberAction } from '@/app/actions';
+
 interface MemberModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -64,25 +66,19 @@ export default function MemberModal({
 
     try {
       setLoading(true);
-      const url = isEditing ? `/api/members/${memberToEdit.member_id}` : '/api/members';
-      const method = isEditing ? 'PUT' : 'POST';
-
       const payload = {
         full_name: fullName.trim(),
         email: email.trim().toLowerCase(),
-        phone: phone.trim() || null,
+        phone: phone.trim() || undefined,
         membership_status: status,
       };
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const res = isEditing
+        ? await updateMemberAction(memberToEdit.member_id, payload)
+        : await createMemberAction(payload);
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save member');
+      if (res.error) {
+        throw new Error(res.error);
       }
 
       onSuccess();

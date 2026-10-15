@@ -3,6 +3,8 @@ import pool, { query } from '@/lib/db';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { toISODateString } from '@/lib/dateUtils';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/members - List members with search, filter by status, and pagination
 export async function GET(request: NextRequest) {
   try {

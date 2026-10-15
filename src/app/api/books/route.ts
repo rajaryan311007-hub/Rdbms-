@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN (
         SELECT book_id, COUNT(*) as cnt FROM Loans WHERE return_date IS NULL GROUP BY book_id
       ) active_loans ON b.book_id = active_loans.book_id
-      GROUP BY b.book_id, b.isbn, b.title, b.publication_year, b.total_copies, b.category_id, c.category_name, b.publisher_id, p.publisher_name
+      GROUP BY b.book_id, b.isbn, b.title, b.publication_year, b.total_copies, b.category_id, c.category_name, b.publisher_id, p.publisher_name, active_loans.cnt
     `;
 
     let allBooks = await query<any[]>(sql);

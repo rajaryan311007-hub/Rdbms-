@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, BookPlus, Edit3, AlertCircle } from 'lucide-react';
+import { createBookAction, updateBookAction } from '@/app/actions';
 
 interface Category {
   category_id: number;
@@ -29,6 +30,8 @@ interface BookModalProps {
   onClose: () => void;
   onSuccess: () => void;
   bookToEdit?: any | null;
+  initialCategories?: Category[];
+  initialPublishers?: Publisher[];
 }
 
 export default function BookModal({
@@ -36,6 +39,8 @@ export default function BookModal({
   onClose,
   onSuccess,
   bookToEdit,
+  initialCategories,
+  initialPublishers,
 }: BookModalProps) {
   const isEditing = Boolean(bookToEdit);
 
@@ -49,25 +54,33 @@ export default function BookModal({
     authors: '',
   });
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [publishers, setPublishers] = useState<Publisher[]>([]);
+  const [categories, setCategories] = useState<Category[]>(initialCategories || []);
+  const [publishers, setPublishers] = useState<Publisher[]>(initialPublishers || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch dropdowns
+  // Fetch dropdowns if not provided
   useEffect(() => {
     if (isOpen) {
-      Promise.all([
-        fetch('/api/categories').then((r) => r.json()),
-        fetch('/api/publishers').then((r) => r.json()),
-      ])
-        .then(([catData, pubData]) => {
-          if (catData.categories) setCategories(catData.categories);
-          if (pubData.publishers) setPublishers(pubData.publishers);
-        })
-        .catch((err) => console.error('Failed to load categories/publishers:', err));
+      if (initialCategories && initialCategories.length > 0) {
+        setCategories(initialCategories);
+      }
+      if (initialPublishers && initialPublishers.length > 0) {
+        setPublishers(initialPublishers);
+      }
+      if ((!initialCategories || initialCategories.length === 0) || (!initialPublishers || initialPublishers.length === 0)) {
+        Promise.all([
+          (!initialCategories || initialCategories.length === 0) ? fetch('/api/categories').then((r) => r.json()) : Promise.resolve({}),
+          (!initialPublishers || initialPublishers.length === 0) ? fetch('/api/publishers').then((r) => r.json()) : Promise.resolve({}),
+        ])
+          .then(([catData, pubData]) => {
+            if (catData?.categories) setCategories(catData.categories);
+            if (pubData?.publishers) setPublishers(pubData.publishers);
+          })
+          .catch((err) => console.error('Failed to load categories/publishers:', err));
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialCategories, initialPublishers]);
 
   // Pre-fill when editing
   useEffect(() => {
@@ -126,18 +139,12 @@ export default function BookModal({
 
     try {
       setLoading(true);
-      const url = isEditing ? `/api/books/${formData.book_id}` : '/api/books';
-      const method = isEditing ? 'PUT' : 'POST';
+      const res = isEditing
+        ? await updateBookAction(formData.book_id!, formData)
+        : await createBookAction(formData);
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save book');
+      if (res.error) {
+        throw new Error(res.error);
       }
 
       onSuccess();
