@@ -29,6 +29,7 @@ export default async function BooksPage({ searchParams }: BooksPageProps) {
     <BooksClientWrapper
       books={data.books}
       categories={data.categories}
+      publishers={data.publishers}
       pagination={data.pagination}
       filters={data.filters}
     />

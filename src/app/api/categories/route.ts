@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { ensureDefaultCategoriesAndPublishers } from '@/lib/serverData';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await ensureDefaultCategoriesAndPublishers();
     const sql = `
       SELECT c.category_id, c.category_name, COUNT(b.book_id) as book_count,
              COALESCE(SUM(b.total_copies), 0) as total_copies

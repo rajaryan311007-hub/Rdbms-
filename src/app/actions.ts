@@ -44,7 +44,7 @@ export async function createBookAction(data: {
         'INSERT INTO Books (isbn, title, category_id, publisher_id, publication_year, total_copies) VALUES (?, ?, ?, ?, ?, ?)',
         [isbn.trim(), title.trim(), Number(category_id), Number(publisher_id), year, copies]
       );
-      const bookId = insertResult.insertId;
+      const bookId = insertResult.insertId || insertResult[0]?.book_id;
 
       // 3. Authors handling
       const authorList: string[] = typeof authors === 'string'
@@ -59,7 +59,7 @@ export async function createBookAction(data: {
           authorId = foundRows[0].author_id;
         } else {
           const [insAuth]: any = await conn.execute('INSERT INTO Authors (author_name) VALUES (?)', [authorName]);
-          authorId = insAuth.insertId;
+          authorId = insAuth.insertId || insAuth[0]?.author_id;
         }
         await conn.execute('INSERT INTO Book_Authors (book_id, author_id) VALUES (?, ?)', [bookId, authorId]);
       }
@@ -133,7 +133,7 @@ export async function updateBookAction(
             authorId = foundRows[0].author_id;
           } else {
             const [ins]: any = await conn.execute('INSERT INTO Authors (author_name) VALUES (?)', [authorName]);
-            authorId = ins.insertId;
+            authorId = ins.insertId || ins[0]?.author_id;
           }
           await conn.execute('INSERT INTO Book_Authors (book_id, author_id) VALUES (?, ?)', [bookId, authorId]);
         }
@@ -386,7 +386,7 @@ export async function issueBookAction(data: {
         'INSERT INTO Loans (book_id, member_id, issue_date, due_date, return_date) VALUES (?, ?, ?, ?, NULL)',
         [bId, mId, issueDateStr, dueDateStr]
       );
-      const loanId = loanResult.insertId;
+      const loanId = loanResult.insertId || loanResult[0]?.loan_id;
 
       await conn.execute(
         'INSERT INTO Audit_Log (event_type, table_name, record_id, details) VALUES (?, ?, ?, ?)',

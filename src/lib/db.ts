@@ -111,6 +111,31 @@ function translateToPg(sql: string): { sql: string; isInsert: boolean } {
   return { sql: translated, isInsert };
 }
 
+function extractInsertId(sql: string, firstRow: any): number | undefined {
+  if (!firstRow) return undefined;
+  const match = sql.match(/INSERT\s+INTO\s+([a-zA-Z0-9_]+)/i);
+  if (!match) return undefined;
+  const table = match[1].toLowerCase();
+  switch (table) {
+    case 'books':
+      return firstRow.book_id;
+    case 'categories':
+      return firstRow.category_id;
+    case 'authors':
+      return firstRow.author_id;
+    case 'publishers':
+      return firstRow.publisher_id;
+    case 'members':
+      return firstRow.member_id;
+    case 'loans':
+      return firstRow.loan_id;
+    case 'audit_log':
+      return firstRow.log_id;
+    default:
+      return Object.values(firstRow)[0] as any;
+  }
+}
+
 export async function checkDatabaseConnection(): Promise<boolean> {
   const { engine } = getDatabaseConfig();
   try {
@@ -183,14 +208,7 @@ export async function query<T = any>(sql: string, params?: any[]): Promise<T> {
 
     if (isInsert) {
       const rows = res.rows as any;
-      rows.insertId =
-        res.rows[0]?.category_id ||
-        res.rows[0]?.book_id ||
-        res.rows[0]?.member_id ||
-        res.rows[0]?.loan_id ||
-        res.rows[0]?.author_id ||
-        res.rows[0]?.publisher_id ||
-        res.rows[0]?.log_id;
+      rows.insertId = extractInsertId(sql, res.rows[0]);
       rows.affectedRows = res.rowCount;
       return rows as T;
     }
@@ -223,14 +241,7 @@ export async function transaction<T>(
           const { sql: translatedSql, isInsert } = translateToPg(sql);
           const res = await client.query(translatedSql, params || []);
           const rows = res.rows as any;
-          rows.insertId =
-            res.rows[0]?.category_id ||
-            res.rows[0]?.book_id ||
-            res.rows[0]?.member_id ||
-            res.rows[0]?.loan_id ||
-            res.rows[0]?.author_id ||
-            res.rows[0]?.publisher_id ||
-            res.rows[0]?.log_id;
+          rows.insertId = extractInsertId(sql, res.rows[0]);
           rows.affectedRows = res.rowCount;
           return [rows, res.fields];
         },
@@ -238,14 +249,7 @@ export async function transaction<T>(
           const { sql: translatedSql, isInsert } = translateToPg(sql);
           const res = await client.query(translatedSql, params || []);
           const rows = res.rows as any;
-          rows.insertId =
-            res.rows[0]?.category_id ||
-            res.rows[0]?.book_id ||
-            res.rows[0]?.member_id ||
-            res.rows[0]?.loan_id ||
-            res.rows[0]?.author_id ||
-            res.rows[0]?.publisher_id ||
-            res.rows[0]?.log_id;
+          rows.insertId = extractInsertId(sql, res.rows[0]);
           rows.affectedRows = res.rowCount;
           return [rows, res.fields];
         },

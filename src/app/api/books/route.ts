@@ -131,7 +131,7 @@ export async function POST(request: Request) {
         'INSERT INTO Books (isbn, title, category_id, publisher_id, publication_year, total_copies) VALUES (?, ?, ?, ?, ?, ?)',
         [isbn.trim(), title.trim(), Number(category_id), Number(publisher_id), year, copies]
       );
-      const bookId = insertResult.insertId;
+      const bookId = insertResult.insertId || insertResult[0]?.book_id;
 
       // 3. Authors handling
       const authorList: string[] = Array.isArray(authors)
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
           authorId = foundAuthors[0].author_id;
         } else {
           const [insAuth]: any = await conn.execute('INSERT INTO Authors (author_name) VALUES (?)', [authorName]);
-          authorId = insAuth.insertId;
+          authorId = insAuth.insertId || insAuth[0]?.author_id;
         }
 
         // Insert junction

@@ -26,6 +26,7 @@ import { deleteBookAction } from '@/app/actions';
 interface BooksClientWrapperProps {
   books: any[];
   categories: any[];
+  publishers?: any[];
   pagination: {
     page: number;
     limit: number;
@@ -44,6 +45,7 @@ interface BooksClientWrapperProps {
 export default function BooksClientWrapper({
   books,
   categories,
+  publishers,
   pagination,
   filters,
 }: BooksClientWrapperProps) {
@@ -403,6 +405,7 @@ export default function BooksClientWrapper({
         }}
         bookToEdit={bookToEdit}
         initialCategories={categories}
+        initialPublishers={publishers}
       />
 
       <BookDetailModal

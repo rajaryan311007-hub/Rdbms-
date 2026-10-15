@@ -1,6 +1,61 @@
 import { query, getDbStatus } from './db';
 import { toISODateString } from './dateUtils';
 
+// Helper to ensure base taxonomy exists in database
+export async function ensureDefaultCategoriesAndPublishers() {
+  try {
+    const catCheck = await query<any[]>('SELECT COUNT(*) as cnt FROM Categories');
+    const catCount = Number(catCheck[0]?.cnt || 0);
+    if (catCount === 0) {
+      const defaultCategories = [
+        'Computer Science',
+        'Software Engineering',
+        'Database Systems',
+        'Artificial Intelligence',
+        'Web Development',
+        'Mathematics',
+        'Physics',
+        'Literature & Fiction',
+        'Business & Management',
+        'History',
+      ];
+      for (const name of defaultCategories) {
+        await query(
+          'INSERT INTO Categories (category_name) VALUES (?) ON CONFLICT (category_name) DO NOTHING',
+          [name]
+        ).catch(async () => {
+          await query('INSERT INTO Categories (category_name) VALUES (?)', [name]).catch(() => {});
+        });
+      }
+    }
+
+    const pubCheck = await query<any[]>('SELECT COUNT(*) as cnt FROM Publishers');
+    const pubCount = Number(pubCheck[0]?.cnt || 0);
+    if (pubCount === 0) {
+      const defaultPublishers = [
+        "O'Reilly Media",
+        'MIT Press',
+        'Addison-Wesley',
+        'Pearson Education',
+        'McGraw-Hill',
+        'Cambridge University Press',
+        'Springer Nature',
+        'Penguin Random House',
+        'HarperCollins',
+        'Simon & Schuster',
+      ];
+      for (const name of defaultPublishers) {
+        await query(
+          'INSERT INTO Publishers (publisher_name) VALUES (?)',
+          [name]
+        ).catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.error('Error ensuring default categories and publishers:', err);
+  }
+}
+
 // 1. Books Data
 export async function getBooksData(params: {
   search?: string;
@@ -11,6 +66,8 @@ export async function getBooksData(params: {
   page?: string | number;
   limit?: string | number;
 }) {
+  await ensureDefaultCategoriesAndPublishers();
+
   const search = (params.search || '').trim().toLowerCase();
   const category = (params.category || '').trim();
   const availability = (params.availability || 'all').trim().toLowerCase();
@@ -20,8 +77,11 @@ export async function getBooksData(params: {
   const limit = Math.max(1, Math.min(100, parseInt(String(params.limit || '10'), 10)));
   const offset = (page - 1) * limit;
 
-  // Categories list for filters
-  const categories = await query<any[]>('SELECT category_id, category_name FROM Categories ORDER BY category_name ASC');
+  // Categories & Publishers list for dropdowns
+  const [categories, publishers] = await Promise.all([
+    query<any[]>('SELECT category_id, category_name FROM Categories ORDER BY category_name ASC'),
+    query<any[]>('SELECT publisher_id, publisher_name FROM Publishers ORDER BY publisher_name ASC'),
+  ]);
 
   // Books query with authors and available copies
   const sql = `
@@ -92,6 +152,7 @@ export async function getBooksData(params: {
       status: Number(b.available_copies) > 0 ? 'available' : 'unavailable',
     })),
     categories,
+    publishers,
     pagination: {
       page,
       limit,
@@ -302,6 +363,7 @@ export async function getHistoryData(params: {
 
 // 5. Categories Data
 export async function getCategoriesData() {
+  await ensureDefaultCategoriesAndPublishers();
   const sql = `
     SELECT c.category_id, c.category_name,
            COUNT(DISTINCT b.book_id) as book_count,
